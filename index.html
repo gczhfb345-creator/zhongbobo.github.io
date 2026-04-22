@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>钟凤波 - 个人作品集</title>
+    <style>
+        /* ==========================================
+           1. 基础设置与色彩变量 (全站渗化过渡系统)
+           ========================================== */
+        :root {
+            --bg-warm: #FDF8F5; /* 暖砂色 */
+            --bg-olive: #D4D8CF; /* 低饱和灰绿色 */
+            --bg-gray: #E8E5DF; /* 传统动画灰 */
+            --bg-dark: #1A1A1A; 
+            
+            --text-main: #1A1A1A; 
+            --text-light: #777777;
+            --accent-red: #D33F3F; 
+            --border-color: rgba(0,0,0,0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { color: var(--text-main); font-family: "Helvetica Neue", "Noto Serif SC", "SimSun", serif; line-height: 1.6; overflow-x: hidden; scroll-behavior: smooth; background-color: var(--bg-warm); width: 100%; }
+
+        /* 动态 SVG 连线画布 */
+        #svg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 90; }
+        .connect-line { fill: none; stroke: rgba(0,0,0,0.4); stroke-width: 1.5; stroke-dasharray: 4 4; animation: dashMove 10s linear infinite; }
+        @keyframes dashMove { to { stroke-dashoffset: -100; } }
+
+        /* 全局导航与右下角返回飞机 */
+        nav { position: fixed; top: 0; left: 0; width: 100%; padding: 25px 5vw; display: flex; justify-content: space-between; align-items: center; z-index: 1000; background: rgba(253, 248, 245, 0.85); backdrop-filter: blur(15px); border-bottom: 1px solid var(--border-color); transform: translateY(-100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        nav.show { transform: translateY(0); }
+        .nav-logo { font-size: 1.2rem; font-weight: 900; letter-spacing: 2px; text-decoration: none; color: var(--text-main); font-family: "Helvetica Neue", sans-serif; }
+        .nav-links { display: flex; gap: 35px; list-style: none; }
+        .nav-links a { text-decoration: none; color: var(--text-main); font-size: 0.9rem; transition: color 0.3s; }
+        .nav-links a:hover { color: var(--accent-red); }
+
+        .paper-plane-top { position: fixed; bottom: 30px; right: 30px; width: 50px; height: 50px; background-color: var(--text-main); color: #fff; border-radius: 50%; display: flex; justify-content: center; align-items: center; text-decoration: none; font-size: 1.2rem; z-index: 900; box-shadow: 0 5px 15px rgba(0,0,0,0.15); transition: all 0.3s ease; opacity: 0; pointer-events: none; }
+        .paper-plane-top.visible { opacity: 1; pointer-events: auto; }
+        .paper-plane-top:hover { transform: translateY(-5px) scale(1.1); background-color: var(--accent-red); }
+
+        .section-header { margin-bottom: 40px; display: flex; gap: 20px; border-bottom: 2px solid var(--text-main); padding-bottom: 10px; }
+        .section-header span { font-family: "Helvetica Neue", sans-serif; font-weight: bold; font-size: 1.5rem; text-transform: uppercase; }
+
+        /* ==========================================
+           2. 首页 Hero
+           ========================================== */
+        .hero { position: relative; height: 100vh; width: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; background: var(--bg-warm); }
+        .hero-video { position: absolute; top: 50%; left: 50%; min-width: 100%; min-height: 100%; transform: translateX(-50%) translateY(-50%); z-index: 0; object-fit: cover; opacity: 0.3; pointer-events: none; }
+        .hero-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, rgba(253,248,245,0.1) 0%, rgba(253,248,245,0.7) 80%, var(--bg-warm) 100%); backdrop-filter: blur(4px); z-index: 1; pointer-events: none; }
+
+        .intro-animation-wrapper { animation: riseFadeIn 3s forwards; opacity: 0; z-index: 10; }
+        .floating-physics-wrapper { animation: rigidFloat 12s linear infinite; animation-delay: 3s; display: flex; flex-direction: column; align-items: center; }
+        .hero-title-zh { font-size: clamp(4rem, 8vw, 6rem); font-weight: 900; line-height: 1; letter-spacing: 15px; text-shadow: 0 0 20px rgba(255, 255, 255, 0.9); }
+        .hero-divider { width: 60%; height: 1px; background-color: var(--text-main); margin: 20px 0; opacity: 0.5; }
+        .hero-motto { font-family: "Noto Serif SC", serif; font-weight: 200; font-size: 1.5rem; letter-spacing: 12px; margin-bottom: 15px; }
+        .hero-title-en { font-family: "Helvetica Neue", sans-serif; font-size: 0.9rem; letter-spacing: 8px; text-transform: uppercase; font-weight: 300;}
+
+        @keyframes riseFadeIn { 0% { opacity: 0; transform: translateY(80px); } 100% { opacity: 1; transform: translateY(0); } }
+        @keyframes rigidFloat { 0%, 100% { transform: translate(0, 0); } 20% { transform: translate(5vw, 5vh); } 21% { transform: translate(4vw, 4vh); } 45% { transform: translate(-5vw, -3vh); } 46% { transform: translate(-4vw, -2vh); } 70% { transform: translate(2vw, -6vh); } 71% { transform: translate(1vw, -5vh); } }
+
+        .spawning-blocks-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
+        .block-wrapper { position: absolute; opacity: 0; animation: blockPopIn 0.8s forwards; pointer-events: auto; }
+        .nav-circle-block { display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 50%; background-color: rgba(244, 236, 230, 0.6); backdrop-filter: blur(8px); filter: grayscale(100%); box-shadow: 0 10px 30px rgba(0,0,0,0.05); text-decoration: none; transition: transform 0.4s ease, filter 0.4s ease, background-color 0.4s ease, box-shadow 0.4s ease; animation: blockFloat 4s ease-in-out infinite alternate; }
+        .nav-circle-block:hover { transform: scale(1.15) !important; filter: grayscale(0%); box-shadow: 0 20px 40px rgba(0,0,0,0.15); z-index: 20; }
+        .nav-circle-block.color-1:hover { background-color: #F8E8E8; } .nav-circle-block.color-2:hover { background-color: #FDF3E1; } .nav-circle-block.color-3:hover { background-color: #E2F0EA; } .nav-circle-block.color-4:hover { background-color: #F0EAE1; }
+        .nav-circle-block.color-5 { filter: grayscale(100%); opacity: 0.6; pointer-events: none; }
+        .nav-circle-block img { width: 50%; height: 50%; object-fit: contain; margin-bottom: 5px; opacity: 1 !important; }
+        .nav-circle-block span { font-family: "Helvetica Neue", sans-serif; font-size: 0.75rem; font-weight: bold; color: var(--text-main); letter-spacing: 1px; }
+
+        .size-l { width: 150px; height: 150px; } .size-m { width: 125px; height: 125px; } .size-s { width: 100px; height: 100px; }
+        @keyframes blockPopIn { 0% { opacity: 0; transform: scale(0); } 80% { opacity: 1; transform: scale(1.1); } 100% { opacity: 1; transform: scale(1); } }
+        @keyframes blockFloat { 0% { transform: translateY(0px); } 100% { transform: translateY(-15px); } }
+
+        /* ==========================================
+           3. 个人介绍
+           ========================================== */
+        #about { padding: 100px 5vw; background: linear-gradient(to bottom, var(--bg-warm) 0%, var(--bg-warm) 75%, var(--bg-olive) 100%); position: relative; }
+        .resume-container { max-width: 1400px; margin: 0 auto; display: flex; flex-direction: column; gap: 80px; position: relative;}
+        
+        .guide-line-2 { position: absolute; right: 25%; top: 380px; width: 3px; height: 300px; border-left: 4px dotted #ccc; z-index: 1;}
+        .guide-line-2::after { content:'▼'; position:absolute; bottom:-15px; left:-8px; color:#ccc; font-size:1.2rem;}
+
+        .about-page-1-image { width: 100%; border-radius: 30px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.1); position: relative; z-index: 2;}
+        .about-page-1-image img { width: 100%; height: auto; display: block; }
+
+        .about-page-2 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 40px; position: relative; z-index: 2; margin-top: 50px;}
+        .ap2-col { display: flex; flex-direction: column; gap: 20px; position: relative; }
+        
+        .ap2-title { font-size: 1.8rem; font-weight: bold; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 3px solid var(--text-main); }
+        .ap2-title-icon { width: 32px; height: 32px; background: var(--bg-dark); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; }
+        
+        .ap2-outlined-card { background: transparent; border: 2px solid var(--text-main); border-radius: 20px; padding: 30px 20px; position: relative; margin-top: 15px; }
+        .ap2-date-pill { position: absolute; top: -15px; left: 20px; background: var(--accent-red); color: #fff; padding: 4px 15px; border-radius: 20px; font-size: 0.85rem; font-family: "Helvetica Neue", sans-serif; font-weight: bold; }
+        .ap2-outlined-card h4 { margin-top: 5px; margin-bottom: 10px; font-size: 1.1rem; color: var(--text-main); }
+        .ap2-outlined-card p { font-size: 0.9rem; line-height: 1.6; color: #555; }
+        
+        .ap2-dotted-line { position: absolute; left: -20px; top: 50px; bottom: 0; width: 4px; border-left: 4px dotted #ccc; }
+        .ap2-col-center { padding-left: 30px; }
+        
+        .retro-console { background: var(--bg-dark); border-radius: 20px; padding: 20px; text-align: center; border: 4px solid #333; margin: 10px 0; }
+        .retro-screen { background: #E5E5E5; height: 90px; border-radius: 8px; margin-bottom: 15px; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;}
+        .retro-screen::after { content: 'GAME BOY'; position: absolute; top: 10px; left:10px; font-family: "Courier New", Courier, monospace; color: rgba(0,0,0,0.2); font-weight: bold; letter-spacing: 2px; font-size:0.7rem;}
+        .console-text { font-family: "Courier New", Courier, monospace; font-size: 1.6rem; font-weight: bold; letter-spacing: 1px; }
+        .c-s1 { color: #A1E44D; } .c-s2 { color: #FFB627; } .c-s3 { color: #00C2D1; } .c-s4 { color: #D36B53; font-size: 0.9rem; margin-left: 5px; }
+        
+        .skill-tags { display: flex; flex-wrap: wrap; gap: 10px; }
+        .tag-red { border: 2px solid var(--accent-red); color: var(--accent-red); padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; }
+        .tag-black { border: 2px solid var(--text-main); color: var(--text-main); padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; }
+        
+        .ap2-heavy-card { background: var(--bg-dark); color: #fff; border-radius: 20px; padding: 30px 20px; position: relative; margin-top: 15px;}
+        .ap2-heavy-card .ap2-date-pill { background: #fff; color: var(--bg-dark); }
+        .ap2-heavy-card h4 { margin-top: 5px; margin-bottom: 10px; font-size: 1.1rem; color: #fff; }
+        .ap2-heavy-card p { font-size: 0.9rem; color: #ccc; }
+
+        /* ==========================================
+           4. AI 视频导演
+           ========================================== */
+        #ai-director { padding: 100px 5vw; min-height: 100vh; background: linear-gradient(to bottom, var(--bg-olive) 0%, var(--bg-olive) 70%, #F4ECE6 100%); position: relative; z-index: 10; overflow: hidden;}
+        .director-overview { display: flex; height: 75vh; align-items: center; justify-content: space-between; margin-top: 20px;}
+        
+        .carousel-container { position: relative; width: 400px; height: 400px; margin-left: -120px; z-index: 20; }
+        .carousel-ring { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; }
+        .carousel-item { position: absolute; width: 162px; height: 216px; top: 50%; left: 50%; margin: -108px 0 0 -81px; cursor: pointer; background: transparent; border: none; box-shadow: none; }
+        .c-item-inner { width: 100%; height: 100%; border-radius: 12px; position: relative; box-shadow: 0 10px 20px rgba(0,0,0,0.15); display: flex; flex-direction: column; overflow: hidden; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s, border 0.3s; border: 2px solid transparent; background: #EFEBE6;}
+        .carousel-item:hover .c-item-inner { border: 2px solid var(--text-main); transform: scale(1.15); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+        .c-item-img { width: 100%; height: 100%; object-fit: cover; }
+        .c-item-grad { position: absolute; bottom: 0; left: 0; width: 100%; height: 60%; background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 100%); z-index: 2; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 12px; }
+        .c-item-grad span { font-size: 0.8rem; font-weight: bold; color: #fff; text-align: center; text-shadow: 0 2px 4px rgba(0,0,0,0.8); letter-spacing: 1px;}
+
+        .director-text-area { flex: 1; max-width: 480px; margin: 0 auto; text-align: center; z-index: 10; padding: 0 20px; }
+        .director-text-area h2 { font-size: 3.2rem; font-family:'Helvetica Neue', sans-serif; font-weight:900; letter-spacing:3px; margin-bottom:20px; color:#1A1A1A; text-shadow: 2px 2px 0 rgba(255,255,255,0.3); }
+        .director-text-area p { color:#222; font-size: 1rem; line-height: 1.8; text-align: justify; }
+
+        .stacked-images-container { position: relative; width: 350px; height: 450px; margin-right: 5vw; z-index: 10;}
+        .stacked-img { position: absolute; width: 200px; height: 150px; background: #fff; border: 5px solid #fff; box-shadow: 0 10px 20px rgba(0,0,0,0.15); border-radius: 10px; transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), z-index 0s; object-fit: cover; }
+        .img-1 { top: 30px; left: 0; z-index: 1; transform: rotate(-6deg); }
+        .img-2 { top: 90px; left: 100px; z-index: 2; transform: rotate(4deg); }
+        .img-3 { top: 160px; left: -10px; z-index: 3; transform: rotate(-3deg); }
+        .img-4 { top: 240px; left: 110px; z-index: 4; transform: rotate(6deg); }
+        .img-5 { top: 300px; left: 20px; z-index: 5; transform: rotate(-5deg); }
+        .stacked-img:hover { transform: scale(1.6) rotate(0deg) !important; z-index: 100 !important; box-shadow: 0 25px 50px rgba(0,0,0,0.4); }
+
+        .folder-cabinet-dense { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 60px; max-width: 1000px; margin-left: auto; margin-right: auto; justify-content: center; position: relative; z-index: 20;}
+        .folder-tab-small { background: #fff; border: 1px solid #1A1A1A; border-radius: 10px 10px 0 0; padding: 12px 25px; font-size: 0.95rem; font-weight: bold; cursor: pointer; transition: all 0.3s; box-shadow: 0 -2px 5px rgba(0,0,0,0.05); font-family: "Helvetica Neue", sans-serif; position: relative;}
+        .folder-tab-small:hover, .folder-tab-small.highlighted { background: #1A1A1A; color: #fff; transform: translateY(-8px); box-shadow: 0 -8px 15px rgba(0,0,0,0.2); }
+        .folder-tab-small span.tag { font-size: 0.7rem; background: #1A1A1A; color: #fff; padding: 2px 8px; border-radius: 10px; margin-left: 8px; vertical-align: middle;}
+        .folder-tab-small:hover span.tag, .folder-tab-small.highlighted span.tag { background: #fff; color: #1A1A1A; }
+
+        .slide-panel { position: fixed; top: 0; right: 0; width: 100%; height: 100vh; background-color: #F7F5F2; z-index: 2000; transform: translateX(100%); transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.6s ease; overflow-y: auto; padding: 0; box-shadow: none; }
+        .slide-panel.active { transform: translateX(0); box-shadow: -20px 0 50px rgba(0,0,0,0.2); }
+        .btn-panel-return { position: fixed; bottom: 40px; right: 40px; background: #1A1A1A; color: #fff; border: none; border-radius: 50px; padding: 15px 30px; font-family: "Helvetica Neue", sans-serif; font-size: 1rem; font-weight: bold; cursor: pointer; transition: all 0.3s; z-index: 2100; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+        .btn-panel-return:hover { background: var(--accent-red); transform: translateY(-3px); }
+        .panel-content-area { max-width: 1400px; margin: 0 auto; padding: 80px 5vw; }
+        
+        .mag-layout-h { display: flex; gap: 5vw; align-items: center; background: #fff; padding: 40px; border-radius: 20px; border: 1px solid var(--border-color); }
+        .mag-h-text { flex: 1; display: flex; flex-direction: column; }
+        .mag-h-num { font-size: 8rem; font-family: "Helvetica Neue", sans-serif; font-weight: 900; line-height: 0.8; letter-spacing: -5px; }
+        .mag-h-title { font-size: 3.5rem; font-family: "Helvetica Neue", sans-serif; font-weight: 900; text-transform: uppercase; margin-top: 20px; word-break: keep-all; }
+        .mag-h-desc { color: var(--text-light); margin-top: 20px; border-left: 2px solid #000; padding-left: 15px; }
+        .mag-h-media { flex: 1.5; box-shadow: 20px 20px 0px rgba(0,0,0,0.05); border: 1px solid #ddd; padding: 10px; background: #fff; }
+        .mag-h-media iframe { width: 100%; aspect-ratio: 16/9; border: none; border-radius: 8px;}
+
+        .mag-layout-v { display: flex; gap: 5vw; align-items: stretch; background: #fff; padding: 40px; border-radius: 20px; border: 1px solid var(--border-color); }
+        .mag-v-text { flex: 1; display: flex; flex-direction: column; justify-content: center;}
+        .mag-v-title { font-size: 4rem; font-family: "Helvetica Neue", sans-serif; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; word-break: keep-all;}
+        .mag-v-subtitle { background: #1A1A1A; color: #fff; display: inline-block; padding: 5px 15px; font-weight: bold; margin: 20px 0; align-self: flex-start; }
+        .mag-v-list { display: flex; gap: 20px; margin-top: 30px; border-top: 2px solid #eee; padding-top: 20px;}
+        .mag-v-list div { flex: 1; }
+        .mag-v-list h4 { font-family: "Helvetica Neue", sans-serif; font-size: 1.2rem; }
+        .mag-v-list p { font-size: 0.8rem; color: gray; margin-top: 10px; }
+        .mag-v-media { flex: 1; background: #1A1A1A; border-radius: 10px; overflow: hidden; position: relative; }
+        .mag-v-media iframe { width: 100%; height: 100%; min-height: 450px; border: none; border-radius: 10px;}
+        .panel-page-divider { width: 100%; height: 2px; background: dashed 2px #ccc; text-align: center; position: relative; margin: 80px 0; }
+        .panel-page-divider::after { content: 'ASSET GALLERY'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #F7F5F2; padding: 0 15px; font-family: "Helvetica Neue", sans-serif; font-weight: bold; color: #888; letter-spacing: 2px;}
+
+        /* ==========================================
+           5. 传统动画 (已隐藏)
+           ========================================== */
+        #animation { display: none; }
+
+        /* ==========================================
+           6. 其他技能
+           ========================================== */
+        #skills { background-color: #F4ECE6; position: relative; padding: 100px 5vw 100px; }
+        .skills-grid-container { max-width: 1400px; margin: 0 auto; display: flex; flex-direction: column; gap: 120px; position: relative; z-index: 2;}
+        
+        .skill-row { display: grid; grid-template-columns: 1fr 1.5fr; gap: 50px; align-items: start; position: relative; z-index: 2; }
+        .skill-row.reverse { grid-template-columns: 1.5fr 1fr; }
+        
+        .s-text-box { background: #fff; padding: 40px; border-radius: 20px; box-shadow: 10px 10px 0px rgba(0,0,0,0.05); border: 1px solid var(--border-color); }
+        .s-text-box span.s-num { font-family: "Helvetica Neue", sans-serif; font-weight: 900; color: var(--text-light); font-size: 1.2rem; }
+        .s-text-box h2 { font-size: 2.5rem; font-weight: bold; margin-bottom: 15px; }
+        
+        /* 瀑布流 (Masonry) 与放大灯箱 */
+        .masonry-gallery { column-count: 3; column-gap: 20px; padding: 20px 0; }
+        .masonry-item { border-radius: 12px; margin-bottom: 20px; break-inside: avoid; overflow: hidden; position: relative; box-shadow: 0 10px 20px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 1; background: #fff;}
+        .masonry-item:hover { transform: scale(1.05); z-index: 100; box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+        .masonry-item img { width: 100%; display: block; object-fit: cover; transition: filter 0.5s ease; }
+        
+        .photo-gallery .masonry-item img { filter: grayscale(100%); }
+        .photo-gallery .masonry-item:hover img { filter: grayscale(0%); }
+        
+        /* 图片灯箱 (Lightbox) */
+        .lightbox { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(253, 248, 245, 0.95); backdrop-filter: blur(10px); z-index: 9999; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.4s ease; }
+        .lightbox.active { opacity: 1; pointer-events: auto; }
+        .lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 20px; box-shadow: 0 30px 60px rgba(0,0,0,0.2); transform: scale(0.8); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .lightbox.active img { transform: scale(1); }
+        .lightbox-close { position: absolute; top: 40px; right: 40px; font-size: 2.5rem; cursor: pointer; color: #1A1A1A; transition: color 0.3s; }
+        .lightbox-close:hover { color: var(--accent-red); }
+
+        /* IP 衍生品 3D 卡片库 */
+        .ip-gallery { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 10px; width: 100%; padding: 20px 0; }
+        .ip-item { border-radius: 12px; position: relative; aspect-ratio: 1; perspective: 1000px; z-index: 1; cursor: pointer; }
+        .ip-item.large { grid-column: span 2; grid-row: span 2; } 
+        
+        .ip-inner { width: 100%; height: 100%; position: relative; transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform-style: preserve-3d; border-radius: 12px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .ip-item:hover { z-index: 100; }
+        .ip-item:hover .ip-inner { transform: scale(1.3); } 
+        .ip-item.is-flipped .ip-inner { transform: rotateY(180deg); }
+        .ip-item.is-flipped:hover .ip-inner { transform: rotateY(180deg) scale(1.3); }
+        
+        .ip-front, .ip-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 12px; overflow: hidden; background: #fff; display: flex; align-items: center; justify-content: center; }
+        .ip-back { transform: rotateY(180deg); }
+        .ip-item img { width: 100%; height: 100%; object-fit: contain; filter: grayscale(100%); transition: filter 0.5s ease; padding: 10px;}
+        .ip-item:hover img { filter: grayscale(0%); }
+
+        .illus-gallery { column-count: 3; column-gap: 20px; padding: 20px 0; }
+
+        .geo-triangle { position: absolute; width: 0; height: 0; border-left: 100px solid transparent; border-right: 100px solid transparent; border-bottom: 150px solid var(--bg-olive); opacity: 0.3; top: 10%; right: 5%; z-index: 1; transform: rotate(15deg); }
+
+        /* ==========================================
+           7. 页脚 Footer
+           ========================================== */
+        .site-footer { padding: 80px 5vw; background: var(--bg-dark); color: #fff; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 20px; position: relative; z-index: 10; border-top: 5px solid var(--accent-red);}
+        .site-footer h2 { font-size: 3rem; font-family: "Helvetica Neue", sans-serif; letter-spacing: 5px; margin-bottom: 10px; font-weight: 900;}
+        .site-footer p { color: #aaa; margin-bottom: 20px; }
+        .footer-contact { display: flex; gap: 40px; font-size: 1.1rem; flex-wrap: wrap; justify-content: center;}
+        .f-item { display: flex; align-items: center; gap: 10px; }
+        .f-item span.icon { color: var(--accent-red); font-size: 1.5rem; }
+
+        /* 响应式 */
+        @media (max-width: 1024px) {
+            .about-page-1, .about-page-2, .director-overview, .skill-row, .skill-row.reverse { flex-direction: column; grid-template-columns: 1fr; }
+            .guide-line-2, .ap2-dotted-line { display: none; }
+            .ap2-col-center { padding-left: 0; }
+            .carousel-container { margin: 0 auto 50px; width: 320px; height: 320px; }
+            .director-text-area { padding: 0 10px; } .stacked-images-container { margin: 0 auto; width: 300px; }
+            .masonry-gallery { column-count: 2; }
+            .ip-gallery { grid-template-columns: repeat(2, 1fr); margin-left: 0;}
+            .ip-item.large { grid-column: span 1; grid-row: span 1; }
+            #svg-canvas, .geo-triangle { display: none; }
+        }
+        @media (max-width: 768px) {
+            .masonry-gallery { column-count: 1; }
+            .footer-contact { flex-direction: column; gap: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+        <span class="lightbox-close">&times;</span>
+        <img id="lightbox-img" src="" alt="Enlarged Photo">
+    </div>
+
+    <svg id="svg-canvas"><path id="dynamic-line" class="connect-line" d=""/></svg>
+
+    <nav id="navbar">
+        <a href="#" class="nav-logo">GC_zhfb</a>
+        <ul class="nav-links">
+            <li><a href="#about">About me</a></li>
+            <li><a href="#ai-director">AI Video</a></li>
+            <li><a href="#skills">Skills</a></li>
+        </ul>
+    </nav>
+    <a href="#hero" class="paper-plane-top" id="paperPlane">✈</a>
+
+    <header class="hero" id="hero">
+        <video class="hero-video" autoplay loop muted playsinline preload="auto"><source src="111.mp4" type="video/mp4"></video>
+        <div class="hero-overlay"></div>
+        <div class="spawning-blocks-container">
+            <div class="block-wrapper" style="animation-delay: 5.4s; top: 15%; left: 15%;"><a href="#about" class="nav-circle-block size-l color-1"><img src="丘丘人5.png"><span>个人介绍</span></a></div>
+            <div class="block-wrapper" style="animation-delay: 8.4s; top: 20%; right: 18%;"><a href="#ai-director" class="nav-circle-block size-m color-2"><img src="丘丘人彩窗立牌1.png"><span>视频导演</span></a></div>
+            
+            <div class="block-wrapper" style="animation-delay: 11.4s; bottom: 25%; left: 20%;"><div class="nav-circle-block size-s color-5"><img src="丘丘人4.png"><span>传统动画</span></div></div>
+            
+            <div class="block-wrapper" style="animation-delay: 15.0s; bottom: 15%; right: 15%;"><a href="#skills" class="nav-circle-block size-l color-4"><img src="西木子 -配件大小效果参考.png"><span>其他技能</span></a></div>
+            <div class="block-wrapper" style="animation-delay: 17.4s; top: 5%; left: 50%; transform: translateX(-50%);"><div class="nav-circle-block size-m color-5"><img src="丘丘人1.png"><span>游戏Demo</span></div></div>
+        </div>
+        <div class="intro-animation-wrapper">
+            <div class="floating-physics-wrapper">
+                <h1 class="hero-title-zh">钟凤波</h1><div class="hero-divider"></div>
+                <p class="hero-motto">君子不器</p><p class="hero-title-en">Personal Portfolio</p>
+            </div>
+        </div>
+    </header>
+
+    <section id="about">
+        <div class="resume-container">
+            <div class="guide-line-2"></div>
+            <div class="section-header"><span>01 / 个人介绍 ABOUT ME</span></div>
+            
+            <div class="about-page-1-image">
+                <img src="2.png" alt="关于我 - 钟凤波">
+            </div>
+
+            <div class="about-page-2">
+                <div class="ap2-dotted-line"></div>
+                <div class="ap2-col">
+                    <div class="ap2-title">工作经历 <div class="ap2-title-icon">▼</div></div>
+                    <div class="ap2-outlined-card"><span class="ap2-date-pill">25·10-次年03</span><h4>AI漫剧导演 (梦光计划)</h4><p>统筹制作团队，负责脚本拆解到剪辑全链路，产能稳定在130分钟/月。</p></div>
+                    <div class="ap2-outlined-card"><span class="ap2-date-pill" style="background:#444;">25·04-25·06</span><h4>短剧编剧助理</h4><p>拆解分析热门短剧，跟进导演拍摄。</p></div>
+                    <div class="ap2-outlined-card"><span class="ap2-date-pill" style="background:#444;">23·06-23·08</span><h4>2D动画实习 (游戏向)</h4><p>参与《王者荣耀》等项目角色全流程交付。</p></div>
+                </div>
+                <div class="ap2-col ap2-col-center">
+                    <div class="ap2-title">擅长 <div class="ap2-title-icon">▼</div></div>
+                    <p style="color:#555; font-size:0.9rem;">卡通角色设定，分镜文戏，变形动画，剪辑节奏，平面排版。</p>
+                    <div class="ap2-title" style="margin-top:15px;">硬技能 (软件) <div class="ap2-title-icon">▼</div></div>
+                    <div class="retro-console"><div class="retro-screen"></div>
+                        <div class="console-text"><span class="c-s1">即梦</span><span class="c-s2">VIDU</span><span class="c-s3">AE</span><span class="c-s4">Ps/Pr/Spine</span></div>
+                    </div>
+                    <div class="ap2-title" style="margin-top:20px;">软能力 (日常) <div class="ap2-title-icon">▼</div></div>
+                    <div class="skill-tags"><span class="tag-red">#创意</span> <span class="tag-red">#热情</span> <span class="tag-black">#团队协作</span><span class="tag-red">#策划能力</span> <span class="tag-black">#善于沟通</span></div>
+                </div>
+                <div class="ap2-col">
+                    <div class="ap2-title">教育经历/培训 <div class="ap2-title-icon">▼</div></div>
+                    <div class="ap2-heavy-card"><span class="ap2-date-pill">2020-2024</span><h4>中南财经政法大学</h4><p>(本科/数媒艺术)</p><p style="color:#fff;">主修二维动画方向</p></div>
+                    <div class="ap2-heavy-card"><span class="ap2-date-pill">24/08-24/11</span><h4>PLPL线上实训</h4><p style="color:#fff;">商业二维动画全流程</p></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="ai-director">
+        <div class="section-header"><span style="color:#1A1A1A; border-bottom: 2px solid #1A1A1A;">02 / AI-视频导演</span></div>
+        <div class="director-overview">
+            <div class="carousel-container" id="ferrisWheel"><div class="carousel-ring" id="wheelRing"></div></div>
+            <div class="director-text-area">
+                <h2>AI DIRECTING</h2>
+                <p>历经AI视频技术的极速迭代——从早期手动跑图，到文字分镜规范化生成，再到构建角色资产库进行精准表演控制。技术纵然万变，叙事核心不离其宗。我始终能发挥扎实的二维分镜功底，精准捕捉故事情绪爆点，将技术转化为极具视觉张力与沉浸感的漫剧作品。</p>
+            </div>
+            <div class="stacked-images-container">
+                <img src="57EE40B5FF81BA58D6F841627CA22174.png" class="stacked-img img-1" alt="Preview 1">
+                <img src="08050C58D0C3F7C864AF2B703AF60FF1.png" class="stacked-img img-2" alt="Preview 2">
+                <img src="B32CB18FE96DAA590B1EC7CC4DA67787.png" class="stacked-img img-3" alt="Preview 3">
+                <img src="Snipaste_2026-04-21_15-21-26.png" class="stacked-img img-4" alt="Preview 4">
+                <img src="0c9cea10-a08c-4a67-acef-e9b46e80487b.png" class="stacked-img img-5" alt="Preview 5">
+            </div>
+        </div>
+        <div class="folder-cabinet-dense" id="folder-cabinet"></div>
+    </section>
+    <div id="panels-container"></div>
+
+    <section id="animation" style="display: none;"></section>
+
+    <section id="skills">
+        <div class="geo-triangle"></div>
+        <div class="section-header"><span>03 / 其他技能</span></div> 
+        
+        <div class="skills-grid-container">
+            <div class="skill-row" style="grid-template-columns: 1fr;">
+                <div class="s-text-box" style="margin-bottom: 20px;">
+                    <span class="s-num">01.</span>
+                    <h2>摄影作品</h2>
+                    <p>光影是现实世界的魔法。摄影不仅是记录，更是训练构图与色彩敏锐度的绝佳方式。随手拍按时间序列排列：春日风筝、夏日海浪、初秋飞鸽与冬日冰晶。（<strong>悬停恢复彩色，点击图片放大查看</strong>）</p>
+                </div>
+                
+                <div class="masonry-gallery photo-gallery">
+                    <div class="masonry-item" onclick="openLightbox(this.querySelector('img').src)"><img src="摄影展示6.png" alt="Spring"></div> 
+                    <div class="masonry-item" onclick="openLightbox(this.querySelector('img').src)"><img src="摄影展示4.png" alt="Summer"></div> 
+                    <div class="masonry-item" onclick="openLightbox(this.querySelector('img').src)"><img src="摄影展示3.png" alt="Summer Rocks"></div> 
+                    <div class="masonry-item" onclick="openLightbox(this.querySelector('img').src)"><img src="摄影展示7.jpg" alt="Autumn"></div> 
+                    <div class="masonry-item" onclick="openLightbox(this.querySelector('img').src)"><img src="摄影展示8.png" alt="Autumn Roof"></div> 
+                    <div class="masonry-item" onclick="openLightbox(this.querySelector('img').src)"><img src="摄影展示9.png" alt="Winter"></div> 
+                    <div class="masonry-item" onclick="openLightbox(this.querySelector('img').src)"><img src="摄影展示1.jpg" alt="Seagull"></div> 
+                    <div class="masonry-item" onclick="openLightbox(this.querySelector('img').src)"><img src="摄影展示2.jpg" alt="Frog Toy"></div> 
+                </div>
+            </div>
+
+            <div class="skill-row" style="grid-template-columns: 1fr; margin-top: 20px;">
+                <div class="s-text-box" style="margin-bottom: 20px;">
+                    <span class="s-num">02.</span>
+                    <h2>IP 衍生品设计</h2>
+                    <p>将虚拟的角色概念转化为触手可及的实体物件。以下展示了我的同人周边排版与设计。<strong>(悬停放大展现彩色，点击卡片翻转查看正反面/实物对比)</strong></p>
+                </div>
+                
+                <div class="ip-gallery">
+                    <div class="ip-item large" onclick="cycleCard(this)">
+                        <div class="ip-inner" style="transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+                            <div class="ip-front"><img src="同人池年西木子效果.png" data-idx="0"></div>
+                            <div class="ip-back"><img src="同人池年西木子效果2.png" data-idx="1"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="ip-item" onclick="this.classList.toggle('is-flipped')"><div class="ip-inner"><div class="ip-front"><img src="方卡2-1.png"></div><div class="ip-back"><img src="方卡2-2.png"></div></div></div>
+                    <div class="ip-item" onclick="this.classList.toggle('is-flipped')"><div class="ip-inner"><div class="ip-front"><img src="背卡90mm-正.png"></div><div class="ip-back"><img src="背卡90mm-反.png"></div></div></div>
+                    <div class="ip-item" onclick="this.classList.toggle('is-flipped')"><div class="ip-inner"><div class="ip-front"><img src="吧唧1-1.png"></div><div class="ip-back"><img src="吧唧1-2.png"></div></div></div>
+                    <div class="ip-item" onclick="this.classList.toggle('is-flipped')"><div class="ip-inner"><div class="ip-front"><img src="吧唧2-1.png"></div><div class="ip-back"><img src="吧唧2-2.png"></div></div></div>
+                    <div class="ip-item" onclick="this.classList.toggle('is-flipped')"><div class="ip-inner"><div class="ip-front"><img src="小立牌1-1.png"></div><div class="ip-back"><img src="小立牌1-2.png"></div></div></div>
+                    <div class="ip-item" onclick="this.classList.toggle('is-flipped')"><div class="ip-inner"><div class="ip-front"><img src="naza贴纸1.png"></div><div class="ip-back"><img src="naza贴纸1-2.png" onerror="this.src='naza贴纸1.png'"></div></div></div>
+                    <div class="ip-item" onclick="this.classList.toggle('is-flipped')"><div class="ip-inner"><div class="ip-front"><img src="吧唧展示1.png"></div><div class="ip-back"><img src="吧唧展示2.png"></div></div></div>
+                    <div class="ip-item" onclick="this.classList.toggle('is-flipped')"><div class="ip-inner"><div class="ip-front"><img src="背板-.png"></div><div class="ip-back"><img src="背板+.png"></div></div></div>
+                    <div class="ip-item" onclick="this.classList.toggle('is-flipped')"><div class="ip-inner"><div class="ip-front"><img src="娟1.png"></div><div class="ip-back"><img src="娟2.png"></div></div></div>
+                    <div class="ip-item" onclick="this.classList.toggle('is-flipped')"><div class="ip-inner"><div class="ip-front"><img src="日历1-原.png"></div><div class="ip-back"><img src="日历1-1.png"></div></div></div>
+                </div>
+            </div>
+
+            <div class="skill-row" style="margin-top: 20px; grid-template-columns: 1fr;">
+                <div class="s-text-box">
+                    <span class="s-num">03.</span>
+                    <h2>手绘与插画</h2>
+                    <p>无论数字技术如何发展，指尖在画板上摩擦的触感永远是最直接的情感表达。日常的速写练习、原画设定与色彩涂鸦，是我保持创作直觉与灵感不断涌现的源泉。（<strong>点击图片可放大查看</strong>）</p>
+                </div>
+                <div class="masonry-gallery illus-gallery">
+                    <div class="masonry-item" onclick="openLightbox(this.querySelector('img').src)"><img src="6.4.jpg"></div>
+                    <div class="masonry-item" onclick="openLightbox(this.querySelector('img').src)"><img src="6.5.jpg"></div>
+                    <div class="masonry-item" onclick="openLightbox(this.querySelector('img').src)"><img src="角色1.jpg"></div>
+                    <div class="masonry-item" onclick="openLightbox(this.querySelector('img').src)"><img src="角色2.jpg"></div>
+                    <div class="masonry-item" onclick="openLightbox(this.querySelector('img').src)"><img src="手绘1.png"></div>
+                    <div class="masonry-item" onclick="openLightbox(this.querySelector('img').src)"><img src="手绘2.png"></div>
+                    <div class="masonry-item" onclick="openLightbox(this.querySelector('img').src)"><img src="手绘3.png"></div>
+                    <div class="masonry-item" onclick="openLightbox(this.querySelector('img').src)"><img src="下载 (40).jpg"></div>
+                    <div class="masonry-item" onclick="openLightbox(this.querySelector('img').src)"><img src="丘丘人1.png"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="site-footer">
+        <h2>THANKS FOR WATCHING</h2>
+        <p>期待与您共同探索视觉表达的无限可能。</p>
+        <div class="footer-contact">
+            <div class="f-item"><span class="icon">✉</span> gc_zhong@qq.com</div>
+            <div class="f-item"><span class="icon">☎</span> 13637492002</div>
+        </div>
+    </footer>
+
+    <script>
+        function openLightbox(src) {
+            const lb = document.getElementById('lightbox');
+            const img = document.getElementById('lightbox-img');
+            img.src = src;
+            lb.classList.add('active');
+        }
+        function closeLightbox() {
+            document.getElementById('lightbox').classList.remove('active');
+        }
+
+        const threeStateImages = ["同人池年西木子效果.png", "同人池年西木子效果2.png", "wx_camera_1756631480280.jpg"];
+        function cycleCard(el) {
+            const frontImg = el.querySelector('.ip-front img');
+            const backImg = el.querySelector('.ip-back img');
+            let currentIdx = parseInt(frontImg.dataset.idx || 0);
+            let nextIdx = (currentIdx + 1) % 3;
+
+            if (el.classList.contains('is-flipped')) {
+                frontImg.src = threeStateImages[nextIdx];
+                el.classList.remove('is-flipped');
+            } else {
+                backImg.src = threeStateImages[nextIdx];
+                el.classList.add('is-flipped');
+            }
+            frontImg.dataset.idx = nextIdx; 
+        }
+
+        /* ======== 已更新视频映射的数据库 ======== */
+        const PROJECTS_DB = [
+            { id: "pnl-01", title: "金丝雀", short: "金丝雀", cover: "被阿尔法抛弃后我带走了他的继承人你-B.png", type: "H", pages: 1, videoUrl: "" },
+            { id: "pnl-02", title: "病娇男主攻略", short: "病娇男主", cover: "竖版3比4封面-Rebirth Apocalypse My Mad Wolf.png", type: "V", pages: 2, videoUrl: "" },
+            { id: "pnl-03", title: "丈夫的道歉", short: "丈夫道歉", cover: "竖版3比4封面--Werewolf repays kindness.png", type: "H", pages: 1, videoUrl: "https://drive.google.com/file/d/1f2_N2o_z1Kh2ydjlT2r__ndCR9fMsTp6/preview" },
+            { id: "pnl-04", title: "带走他的继承人", short: "带走继承人", cover: "竖版封面-To avenge his white moonlight, my boyfriend tortured me ninety-nine times.png", type: "V", pages: 1, videoUrl: "https://drive.google.com/file/d/1SwK5dygASc2e8UB14RwXJVYC53d_uCx2/preview" },
+            { id: "pnl-05", title: "白月光", short: "白月光", cover: "竖版封面带logo-From Copilot to Captain I Left My Ex Behind.png", type: "H", pages: 1, videoUrl: "https://drive.google.com/file/d/15GRlqKMgwXqZqEYVqJTgvn87HlVoW6wh/preview" },
+            { id: "pnl-06", title: "从副驾驶到机长", short: "副驾机长", cover: "竖屏封面3比4-The Kill Stream Survive or Die.png", type: "V", pages: 2, videoUrl: "https://drive.google.com/file/d/147z3rbzQkvQllHNytrGs_NNN0F3RHasB/preview" },
+            { id: "pnl-07", title: "全员恶人", short: "全员恶人", cover: "被阿尔法抛弃后我带走了他的继承人你-B.png", type: "H", pages: 1, videoUrl: "" },
+            { id: "pnl-08", title: "暴雨末日", short: "暴雨末日", cover: "竖版3比4封面-Rebirth Apocalypse My Mad Wolf.png", type: "V", pages: 1, videoUrl: "https://drive.google.com/file/d/1mQ9_Sps4vbrov417jQUQPvxmh__N_CJK/preview" },
+            { id: "pnl-09", title: "我是一只吸血鬼", short: "吸血鬼", cover: "竖版3比4封面--Werewolf repays kindness.png", type: "H", pages: 1, videoUrl: "" },
+            { id: "pnl-10", title: "销管只发200块", short: "销管200", cover: "竖版封面-To avenge his white moonlight, my boyfriend tortured me ninety-nine times.png", type: "V", pages: 1, videoUrl: "https://drive.google.com/file/d/16W3OhJ1Z2lv9W_b_NpqaTqvRueTFi2Sc/preview" },
+            { id: "pnl-11", title: "狼人的报恩", short: "狼人报恩", cover: "竖版封面带logo-From Copilot to Captain I Left My Ex Behind.png", type: "H", pages: 2, videoUrl: "https://drive.google.com/file/d/1mQ7jL50iRk105CshOxa70Ey68804MNeV/preview" },
+            { id: "pnl-12", title: "末日重生", short: "末日重生", cover: "竖屏封面3比4-The Kill Stream Survive or Die.png", type: "V", pages: 1, videoUrl: "https://drive.google.com/file/d/1kD-Bygvs-veTgTvJoDF-tBvn8Za0wvPJ/preview" },
+            { id: "pnl-13", title: "穿越成我哥的小狗", short: "穿成小狗", cover: "被阿尔法抛弃后我带走了他的继承人你-B.png", type: "H", pages: 2, videoUrl: "https://drive.google.com/file/d/13zSWWkVFFb5DVKUcFSghQ3fDZnjRjYiF/preview" },
+            { id: "pnl-14", title: "末世生存直播", short: "末世直播", cover: "竖版3比4封面-Rebirth Apocalypse My Mad Wolf.png", type: "V", pages: 2, videoUrl: "https://drive.google.com/file/d/1rHr-tlCgRLRNvcargOkVDbH5vSLhCJck/preview" },
+            { id: "pnl-15", title: "女王崛起", short: "女王崛起", cover: "竖版3比4封面--Werewolf repays kindness.png", type: "H", pages: 2, videoUrl: "" }
+        ];
+
+        const cabinetContainer = document.getElementById('folder-cabinet');
+        const panelsContainer = document.getElementById('panels-container');
+        
+        let tabsHtml = '';
+        let panelsHtml = '';
+
+        PROJECTS_DB.forEach((proj, index) => {
+            const num = (index + 1).toString().padStart(2, '0');
+            const tagHtml = proj.pages === 2 ? `<span class="tag">2 P</span>` : '';
+            
+            tabsHtml += `<button class="folder-tab-small" id="tab-${proj.id}" onclick="openPanel('${proj.id}')" data-id="${proj.id}">${num} ${proj.title} ${tagHtml}</button>`;
+            
+            let page1Html = proj.type === "H" ? `
+                <div class="mag-layout-h">
+                    <div class="mag-h-text">
+                        <div class="mag-h-num">${num}°</div>
+                        <div class="mag-h-title">${proj.short}</div>
+                        <div class="mag-h-desc">Full of imagination. Visual narrative exploring the boundaries of AI generation.<br><br>探索画面张力与风格一致性。</div>
+                    </div>
+                    <div class="mag-h-media"><iframe data-src="${proj.videoUrl}" src="" allow="autoplay" allowfullscreen></iframe></div>
+                </div>` : `
+                <div class="mag-layout-v">
+                    <div class="mag-v-text">
+                        <div class="mag-v-title">${proj.short}</div>
+                        <div class="mag-v-subtitle">CHARACTER / WORKS / AUDIOVISUAL</div>
+                        <div class="mag-v-list">
+                            <div><h4>01 CONCEPT</h4><p>Storyboarding logic applied to generation.</p></div>
+                            <div><h4>02 RESULT</h4><p>Consistent output matching the vision.</p></div>
+                        </div>
+                    </div>
+                    <div class="mag-v-media"><iframe data-src="${proj.videoUrl}" src="" allow="autoplay" allowfullscreen></iframe></div>
+                </div>`;
+
+            let page2Html = proj.pages === 2 ? `
+                <div class="panel-page-divider"></div>
+                <div class="mag-layout-h" style="flex-direction:row-reverse; background:transparent; border:none; padding:0;">
+                    <div class="mag-h-text" style="background:#fff; padding:30px; border-radius:20px; border:1px solid #ddd;"><h3 style="font-size:2rem; margin-bottom:15px;">资产与设定</h3><p>角色三视图及关键道具设计演变。</p></div>
+                    <div class="mag-h-media" style="box-shadow:none; border:none; padding:0;"><img src="${proj.cover}" style="width:100%; border-radius:10px; object-fit:contain; background:#1A1A1A; height:400px;"></div>
+                </div>` : '';
+
+            panelsHtml += `
+                <div id="${proj.id}" class="slide-panel">
+                    <div class="panel-content-area">${page1Html}${page2Html}</div>
+                    <button class="btn-panel-return" onclick="closePanel('${proj.id}')">✕ 退出放映</button>
+                </div>`;
+        });
+        cabinetContainer.innerHTML = tabsHtml;
+        panelsContainer.innerHTML = panelsHtml;
+
+        /* 摩天轮算法 */
+        const ring = document.getElementById('wheelRing');
+        const svgPath = document.getElementById('dynamic-line');
+        const wheelItemsCount = 6;
+        const wheelRadius = 210; 
+        const wheelData = [
+            { id: "pnl-04", title: "带走继承人", cover: "被阿尔法抛弃后我带走了他的继承人你-B.png" },
+            { id: "pnl-05", title: "白月光", cover: "竖版封面-To avenge his white moonlight, my boyfriend tortured me ninety-nine times.png" },
+            { id: "pnl-06", title: "副驾机长", cover: "竖版封面带logo-From Copilot to Captain I Left My Ex Behind.png" },
+            { id: "pnl-11", title: "狼人报恩", cover: "竖版3比4封面--Werewolf repays kindness.png" },
+            { id: "pnl-12", title: "末日重生", cover: "竖版3比4封面-Rebirth Apocalypse My Mad Wolf.png" },
+            { id: "pnl-14", title: "末世直播", cover: "竖屏封面3比4-The Kill Stream Survive or Die.png" }
+        ];
+        
+        let wheelHtml = '';
+        for(let i=0; i<wheelItemsCount; i++) {
+            const p = wheelData[i];
+            wheelHtml += `
+                <div class="carousel-item" id="cItem-${i}" onmouseenter="wheelPaused=true; drawLineToTab(this, '${p.id}')" onmouseleave="wheelPaused=false; clearLine('${p.id}')" onclick="openPanel('${p.id}')">
+                    <div class="c-item-inner"><img class="c-item-img" src="${p.cover}"><div class="c-item-grad"><span>${p.title}</span></div></div>
+                </div>`;
+        }
+        ring.innerHTML = wheelHtml;
+
+        let currentAngle = 0; let wheelPaused = false; 
+        function animateWheel() {
+            if (!wheelPaused) currentAngle -= 0.15; 
+            ring.style.transform = `rotate(${currentAngle}deg)`;
+            for(let i=0; i<wheelItemsCount; i++) {
+                const item = document.getElementById(`cItem-${i}`);
+                const rad = i * (360 / wheelItemsCount) * (Math.PI / 180);
+                item.style.transform = `translate(${Math.cos(rad) * wheelRadius}px, ${Math.sin(rad) * wheelRadius}px) rotate(${-currentAngle}deg)`;
+            }
+            requestAnimationFrame(animateWheel);
+        }
+        animateWheel();
+
+        function drawLineToTab(cardElem, tabId) {
+            const tabElem = document.getElementById(`tab-${tabId}`);
+            if(!tabElem) return;
+            tabElem.classList.add('highlighted');
+            const cRect = cardElem.getBoundingClientRect(), tRect = tabElem.getBoundingClientRect();
+            const startX = cRect.left + cRect.width / 2, startY = cRect.bottom - 10, endX = tRect.left + tRect.width / 2, endY = tRect.top + 5;
+            svgPath.setAttribute('d', `M ${startX} ${startY} C ${startX} ${(startY+endY)/2}, ${endX} ${(startY+endY)/2}, ${endX} ${endY}`);
+        }
+        function clearLine(tabId) {
+            const tabElem = document.getElementById(`tab-${tabId}`);
+            if(tabElem) tabElem.classList.remove('highlighted');
+            svgPath.setAttribute('d', '');
+        }
+
+        const navbar = document.getElementById('navbar'), paperPlane = document.getElementById('paperPlane');
+        document.addEventListener('mousemove', (e) => {
+            if (e.clientY <= 100 || navbar.matches(':hover')) navbar.classList.add('show'); else navbar.classList.remove('show');
+        });
+        window.addEventListener('scroll', () => { 
+            if (window.scrollY === 0) navbar.classList.add('show'); 
+            if (window.scrollY > window.innerHeight * 0.5) paperPlane.classList.add('visible'); else paperPlane.classList.remove('visible');
+            svgPath.setAttribute('d', ''); 
+        });
+
+        /* ======== 修复后的打开与关闭逻辑 ======== */
+        function openPanel(id) { 
+            const p = document.getElementById(id); 
+            if (p) { 
+                p.classList.add('active'); 
+                navbar.classList.remove('show'); 
+                paperPlane.style.display = 'none'; 
+                const iframe = p.querySelector('iframe');
+                // 直接重新赋予 data-src 以触发 Google Drive 播放器加载
+                if (iframe) { 
+                    iframe.src = iframe.getAttribute('data-src'); 
+                }
+            } 
+        }
+        function closePanel(id) { 
+            const p = document.getElementById(id); 
+            if (p) { 
+                p.classList.remove('active'); 
+                paperPlane.style.display = 'flex'; 
+                const iframe = p.querySelector('iframe');
+                if (iframe) { 
+                    iframe.src = ''; // 关闭时清空，防止后台视频出声
+                }
+            } 
+        }
+    </script>
+</body>
+</html>
