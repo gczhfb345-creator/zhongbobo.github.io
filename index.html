@@ -5,6 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>钟凤波 - 个人作品集</title>
     <style>
+        /* 加载动画幕布 */
+#global-loader {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background-color: var(--bg-warm); z-index: 99999;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    transition: opacity 0.8s ease, visibility 0.8s ease;
+}
+.loader-spinner {
+    width: 40px; height: 40px; border: 3px solid rgba(211, 63, 63, 0.2);
+    border-top-color: var(--accent-red); border-radius: 50%;
+    animation: spin 1s linear infinite; margin-bottom: 20px;
+}
+.loader-text { font-family: "Helvetica Neue", sans-serif; font-weight: bold; letter-spacing: 3px; color: var(--text-main); }
+@keyframes spin { 100% { transform: rotate(360deg); } }
         /* ==========================================
            1. 基础设置与色彩变量 (全站渗化过渡系统)
            ========================================== */
@@ -27,7 +41,10 @@
         #svg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 90; }
         .connect-line { fill: none; stroke: rgba(0,0,0,0.4); stroke-width: 1.5; stroke-dasharray: 4 4; animation: dashMove 10s linear infinite; }
         @keyframes dashMove { to { stroke-dashoffset: -100; } }
-
+<div id="global-loader">
+    <div class="loader-spinner"></div>
+    <div class="loader-text">LOADING...</div>
+</div>
         /* 全局导航与右下角返回飞机 */
         nav { position: fixed; top: 0; left: 0; width: 100%; padding: 25px 5vw; display: flex; justify-content: space-between; align-items: center; z-index: 1000; background: rgba(253, 248, 245, 0.85); backdrop-filter: blur(15px); border-bottom: 1px solid var(--border-color); transform: translateY(-100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         nav.show { transform: translateY(0); }
@@ -620,5 +637,11 @@
             } 
         }
     </script>
+    // 当网页所有资源（包括图片、视频）加载完毕后，隐藏加载幕布
+window.addEventListener('load', function() {
+    const loader = document.getElementById('global-loader');
+    loader.style.opacity = '0';
+    setTimeout(() => { loader.style.visibility = 'hidden'; }, 800);
+});
 </body>
 </html>
